@@ -1,0 +1,43 @@
+---
+- name: Install PHP repository system dependencies
+  ansible.builtin.apt:
+    name: "{{ php_system_dependencies }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Check whether requested PHP-FPM package is available
+  ansible.builtin.command:
+    cmd: "apt-cache show {{ php_fpm_package }}"
+  register: php_package_probe
+  changed_when: false
+  failed_when: false
+
+- name: Add PHP fallback APT repository when package is unavailable
+  ansible.builtin.apt_repository:
+    repo: "{{ php_fallback_repository }}"
+    state: present
+    update_cache: true
+  when: php_package_probe.rc != 0
+
+- name: Install PHP packages
+  ansible.builtin.apt:
+    name: "{{ php_packages }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Configure PHP-FPM pool
+  ansible.builtin.template:
+    src: www.conf.j2
+    dest: "{{ php_fpm_pool_file }}"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart PHP-FPM
+
+- name: Enable and start PHP-FPM
+  ansible.builtin.service:
+    name: "{{ php_fpm_service_name }}"
+    state: started
+    enabled: true

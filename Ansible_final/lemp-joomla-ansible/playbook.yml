@@ -1,0 +1,46 @@
+---
+- name: Install LEMP stack and Joomla CMS
+  hosts: web01
+  become: true
+  gather_facts: false
+
+  pre_tasks:
+    - name: Bootstrap Python for Ansible on minimal Ubuntu images
+      ansible.builtin.raw: |
+        if command -v python3 >/dev/null 2>&1 \
+          && python3 -c 'import apt' >/dev/null 2>&1; then
+          echo BOOTSTRAP_OK
+        else
+          export DEBIAN_FRONTEND=noninteractive
+          apt-get update
+          apt-get install -y python3 python3-apt
+          echo BOOTSTRAP_CHANGED
+        fi
+      register: bootstrap_python
+      changed_when: "'BOOTSTRAP_CHANGED' in bootstrap_python.stdout"
+
+    - name: Gather facts after Python bootstrap
+      ansible.builtin.setup:
+
+    - name: Verify Ubuntu target
+      ansible.builtin.assert:
+        that:
+          - ansible_facts.distribution == "Ubuntu"
+          - ansible_facts.pkg_mgr == "apt"
+        fail_msg: >-
+          This playbook supports Ubuntu systems using the APT package manager.
+          The exact Ubuntu release may differ.
+
+    - name: Install base system dependencies
+      ansible.builtin.apt:
+        name: "{{ system_base_packages }}"
+        state: present
+        update_cache: true
+        cache_valid_time: 3600
+
+  roles:
+    - role: nginx
+    - role: php
+    - role: mysql
+    - role: initapps
+    - role: joomla

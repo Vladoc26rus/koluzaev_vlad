@@ -1,0 +1,13 @@
+---
+mysql_packages:
+  - mysql-server
+  - python3-pymysql
+  - python3-cryptography
+mysql_service_name: mysql
+mysql_client_binary: /usr/bin/mysql
+mysql_socket: /var/run/mysqld/mysqld.sock
+mysql_root_config_file: /root/.my.cnf
+mysql_admin_user: admin
+mysql_admin_host: localhost
+mysql_admin_priv: "*.*:ALL"
+mysql_joomla_database: joomla

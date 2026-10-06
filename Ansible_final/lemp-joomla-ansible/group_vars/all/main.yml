@@ -1,0 +1,40 @@
+---
+system_base_packages:
+  - ca-certificates
+  - curl
+  - dirmngr
+  - gnupg
+  - gzip
+  - lsb-release
+  - python3
+  - python3-apt
+  - software-properties-common
+  - tar
+  - unzip
+  - xz-utils
+
+nginx_user: www-data
+nginx_server_name: "_"
+nginx_site_available: /etc/nginx/sites-available/joomla.conf
+nginx_site_enabled: /etc/nginx/sites-enabled/joomla.conf
+
+initapps_nginx_service_name: nginx
+initapps_nginx_user: "{{ nginx_user }}"
+initapps_nginx_server_name: "{{ nginx_server_name }}"
+initapps_nginx_site_available: "{{ nginx_site_available }}"
+initapps_nginx_site_enabled: "{{ nginx_site_enabled }}"
+
+php_version: "8.1"
+php_fpm_socket: /run/php/php8.1-fpm.sock
+php_web_user: "{{ nginx_user }}"
+initapps_php_fpm_socket: "{{ php_fpm_socket }}"
+
+mysql_admin_user: admin
+mysql_admin_priv: "*.*:ALL"
+mysql_joomla_database: joomla
+
+joomla_version: "5.1.4"
+joomla_web_root: /var/www/sites/joomla
+joomla_owner: "{{ nginx_user }}"
+joomla_group: "{{ nginx_user }}"
+initapps_joomla_web_root: "{{ joomla_web_root }}"

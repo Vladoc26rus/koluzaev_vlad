@@ -1,0 +1,23 @@
+---
+php_version: "8.1"
+php_fpm_service_name: "php{{ php_version }}-fpm"
+php_fpm_socket: "/run/php/php{{ php_version }}-fpm.sock"
+php_fpm_pool_file: "/etc/php/{{ php_version }}/fpm/pool.d/www.conf"
+php_web_user: www-data
+php_fpm_package: "php{{ php_version }}-fpm"
+php_fallback_repository: ppa:ondrej/php
+php_system_dependencies:
+  - ca-certificates
+  - dirmngr
+  - gnupg
+  - software-properties-common
+php_packages:
+  - "php{{ php_version }}-cli"
+  - "php{{ php_version }}-fpm"
+  - "php{{ php_version }}-mysql"
+  - "php{{ php_version }}-xml"
+  - "php{{ php_version }}-curl"
+  - "php{{ php_version }}-gd"
+  - "php{{ php_version }}-mbstring"
+  - "php{{ php_version }}-zip"
+  - "php{{ php_version }}-intl"

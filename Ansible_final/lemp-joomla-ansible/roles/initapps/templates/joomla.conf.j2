@@ -1,0 +1,23 @@
+server {
+    listen 80 default_server;
+    listen [::]:80 default_server;
+
+    server_name {{ initapps_nginx_server_name }};
+    root {{ initapps_joomla_web_root }};
+    index index.php index.html;
+
+    client_max_body_size 64m;
+
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    location ~ \.php$ {
+        include snippets/fastcgi-php.conf;
+        fastcgi_pass unix:{{ initapps_php_fpm_socket }};
+    }
+
+    location ~ /\.(?!well-known).* {
+        deny all;
+    }
+}

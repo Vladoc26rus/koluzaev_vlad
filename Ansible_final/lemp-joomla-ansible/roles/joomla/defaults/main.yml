@@ -1,0 +1,13 @@
+---
+joomla_version: "5.1.4"
+joomla_web_root: /var/www/sites/joomla
+joomla_owner: www-data
+joomla_group: www-data
+joomla_cache_dir: /var/cache/joomla
+joomla_system_dependencies:
+  - ca-certificates
+  - gzip
+  - tar
+joomla_archive_name: "Joomla_{{ joomla_version }}-Stable-Full_Package.tar.gz"
+joomla_download_url: >-
+  https://github.com/joomla/joomla-cms/releases/download/{{ joomla_version }}/{{ joomla_archive_name }}

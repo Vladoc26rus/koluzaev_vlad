@@ -1,0 +1,151 @@
+---
+- name: Install MySQL packages
+  ansible.builtin.apt:
+    name: "{{ mysql_packages }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Enable and start MySQL
+  ansible.builtin.service:
+    name: "{{ mysql_service_name }}"
+    state: started
+    enabled: true
+
+- name: Gather installed package facts for MySQL
+  ansible.builtin.package_facts:
+    manager: auto
+
+- name: Select MySQL root authentication plugin
+  ansible.builtin.set_fact:
+    mysql_root_auth_plugin_effective: >-
+      {{
+        'caching_sha2_password'
+        if (ansible_facts.packages['mysql-server'][0].version.split('.')[0] | int) >= 8
+        else 'mysql_native_password'
+      }}
+
+- name: Install root MySQL client configuration
+  ansible.builtin.template:
+    src: root-my.cnf.j2
+    dest: "{{ mysql_root_config_file }}"
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+
+- name: Inspect MySQL root account state
+  ansible.builtin.command:
+    argv:
+      - "{{ mysql_client_binary }}"
+      - "--defaults-extra-file={{ mysql_root_config_file }}"
+      - --protocol=socket
+      - "--socket={{ mysql_socket }}"
+      - --connect-expired-password
+      - --batch
+      - --skip-column-names
+      - "--execute=SELECT CONCAT(plugin, '|', password_expired) FROM mysql.user WHERE User='root' AND Host='localhost';"
+  register: mysql_root_state
+  changed_when: false
+  failed_when: false
+  no_log: true
+
+- name: Reset MySQL root through implicit socket authentication
+  ansible.builtin.command:
+    argv:
+      - "{{ mysql_client_binary }}"
+      - --no-defaults
+      - --protocol=socket
+      - "--socket={{ mysql_socket }}"
+      - --user=root
+      - --connect-expired-password
+      - --batch
+    stdin: >-
+      ALTER USER 'root'@'localhost'
+      IDENTIFIED WITH {{ mysql_root_auth_plugin_effective }}
+      BY '{{ mysql_root_password | replace('\\', '\\\\') | replace("'", "''") }}'
+      PASSWORD EXPIRE NEVER;
+  register: mysql_root_socket_reset
+  when: >-
+    mysql_root_state.rc != 0
+    or (mysql_root_state.stdout | trim)
+       != (mysql_root_auth_plugin_effective ~ '|N')
+  changed_when: mysql_root_socket_reset.rc == 0
+  failed_when: false
+  no_log: true
+
+- name: Reset MySQL root using configured password
+  ansible.builtin.command:
+    argv:
+      - "{{ mysql_client_binary }}"
+      - "--defaults-extra-file={{ mysql_root_config_file }}"
+      - --protocol=socket
+      - "--socket={{ mysql_socket }}"
+      - --connect-expired-password
+      - --batch
+    stdin: >-
+      ALTER USER 'root'@'localhost'
+      IDENTIFIED WITH {{ mysql_root_auth_plugin_effective }}
+      BY '{{ mysql_root_password | replace('\\', '\\\\') | replace("'", "''") }}'
+      PASSWORD EXPIRE NEVER;
+  register: mysql_root_password_reset
+  when:
+    - >-
+      mysql_root_state.rc != 0
+      or (mysql_root_state.stdout | trim)
+         != (mysql_root_auth_plugin_effective ~ '|N')
+    - mysql_root_socket_reset.rc | default(1) != 0
+  changed_when: mysql_root_password_reset.rc == 0
+  failed_when: false
+  no_log: true
+
+- name: Fail when MySQL root account cannot be configured
+  ansible.builtin.fail:
+    msg: >-
+      Unable to configure root@localhost. The account is neither accessible
+      through implicit Unix-socket authentication nor with the configured
+      mysql_root_password. Recover the MySQL root account and rerun the role.
+  when:
+    - >-
+      mysql_root_state.rc != 0
+      or (mysql_root_state.stdout | trim)
+         != (mysql_root_auth_plugin_effective ~ '|N')
+    - mysql_root_socket_reset.rc | default(1) != 0
+    - mysql_root_password_reset.rc | default(1) != 0
+
+- name: Verify MySQL root password and expiration state
+  ansible.builtin.command:
+    argv:
+      - "{{ mysql_client_binary }}"
+      - "--defaults-extra-file={{ mysql_root_config_file }}"
+      - --protocol=socket
+      - "--socket={{ mysql_socket }}"
+      - --batch
+      - --skip-column-names
+      - "--execute=SELECT CONCAT(plugin, '|', password_expired) FROM mysql.user WHERE User='root' AND Host='localhost';"
+  register: mysql_root_verify
+  changed_when: false
+  failed_when: >-
+    mysql_root_verify.rc != 0
+    or (mysql_root_verify.stdout | trim)
+       != (mysql_root_auth_plugin_effective ~ '|N')
+  no_log: true
+
+- name: Create Joomla database
+  community.mysql.mysql_db:
+    name: "{{ mysql_joomla_database }}"
+    encoding: utf8mb4
+    collation: utf8mb4_unicode_ci
+    config_file: "{{ mysql_root_config_file }}"
+    state: present
+
+- name: Create Joomla MySQL administrator
+  community.mysql.mysql_user:
+    name: "{{ mysql_admin_user }}"
+    host: "{{ mysql_admin_host }}"
+    password: "{{ mysql_admin_password }}"
+    priv: "{{ mysql_admin_priv }}"
+    config_file: "{{ mysql_root_config_file }}"
+    append_privs: false
+    state: present
+  no_log: true

@@ -1,0 +1,11 @@
+---
+galaxy_info:
+  author: local
+  description: Install PHP 8.1 and PHP-FPM extensions required by Joomla
+  license: MIT
+  min_ansible_version: "2.15"
+  platforms:
+    - name: Ubuntu
+      versions:
+        - all
+dependencies: []

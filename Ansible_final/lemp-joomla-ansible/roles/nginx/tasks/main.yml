@@ -1,0 +1,21 @@
+---
+- name: Install Nginx
+  ansible.builtin.apt:
+    name: "{{ nginx_package_name }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Configure Nginx worker user
+  ansible.builtin.lineinfile:
+    path: /etc/nginx/nginx.conf
+    regexp: '^user\s+[^;]+;'
+    line: "user {{ nginx_user }};"
+    backup: false
+  notify: Restart Nginx
+
+- name: Enable and start Nginx
+  ansible.builtin.service:
+    name: "{{ nginx_service_name }}"
+    state: started
+    enabled: true

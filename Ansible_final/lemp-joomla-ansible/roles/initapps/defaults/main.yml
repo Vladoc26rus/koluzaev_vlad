@@ -1,0 +1,8 @@
+---
+initapps_nginx_service_name: nginx
+initapps_nginx_user: www-data
+initapps_nginx_server_name: "_"
+initapps_nginx_site_available: /etc/nginx/sites-available/joomla.conf
+initapps_nginx_site_enabled: /etc/nginx/sites-enabled/joomla.conf
+initapps_php_fpm_socket: /run/php/php8.1-fpm.sock
+initapps_joomla_web_root: /var/www/sites/joomla

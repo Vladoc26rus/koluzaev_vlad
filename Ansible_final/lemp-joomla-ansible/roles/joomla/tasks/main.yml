@@ -1,0 +1,43 @@
+---
+- name: Install Joomla archive system dependencies
+  ansible.builtin.apt:
+    name: "{{ joomla_system_dependencies }}"
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Create Joomla download cache directory
+  ansible.builtin.file:
+    path: "{{ joomla_cache_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Download Joomla archive
+  ansible.builtin.get_url:
+    url: "{{ joomla_download_url }}"
+    dest: "{{ joomla_cache_dir }}/{{ joomla_archive_name }}"
+    owner: root
+    group: root
+    mode: "0644"
+    force: false
+
+- name: Extract Joomla into document root
+  ansible.builtin.unarchive:
+    src: "{{ joomla_cache_dir }}/{{ joomla_archive_name }}"
+    dest: "{{ joomla_web_root }}"
+    remote_src: true
+    owner: "{{ joomla_owner }}"
+    group: "{{ joomla_group }}"
+    mode: "u=rwX,g=rX,o=rX"
+    creates: "{{ joomla_web_root }}/index.php"
+
+- name: Ensure Joomla tree ownership
+  ansible.builtin.file:
+    path: "{{ joomla_web_root }}"
+    state: directory
+    owner: "{{ joomla_owner }}"
+    group: "{{ joomla_group }}"
+    mode: "u=rwX,g=rX,o=rX"
+    recurse: true

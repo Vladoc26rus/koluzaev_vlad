@@ -1,0 +1,35 @@
+---
+- name: Create Joomla document root
+  ansible.builtin.file:
+    path: "{{ initapps_joomla_web_root }}"
+    state: directory
+    owner: "{{ initapps_nginx_user }}"
+    group: "{{ initapps_nginx_user }}"
+    mode: "0755"
+
+- name: Install Joomla Nginx virtual host
+  ansible.builtin.template:
+    src: joomla.conf.j2
+    dest: "{{ initapps_nginx_site_available }}"
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Reload Nginx
+
+- name: Disable default Nginx virtual host
+  ansible.builtin.file:
+    path: /etc/nginx/sites-enabled/default
+    state: absent
+  notify: Reload Nginx
+
+- name: Enable Joomla Nginx virtual host
+  ansible.builtin.file:
+    src: "{{ initapps_nginx_site_available }}"
+    dest: "{{ initapps_nginx_site_enabled }}"
+    state: link
+    force: true
+  notify: Reload Nginx
+
+- name: Validate Nginx configuration
+  ansible.builtin.command: /usr/sbin/nginx -t
+  changed_when: false
